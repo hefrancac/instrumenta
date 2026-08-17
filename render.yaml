@@ -25,7 +25,7 @@ services:
       - key: ENV
         value: prod
       - key: DEMO_MODE
-        value: "true"        # deixa o front funcionar sem login; troque p/ false quando tiver auth
+        value: "false"       # auth JWT real: endpoints protegidos exigem token (sem fallback demo)
       - key: SCRAPER_MODE
         value: mock          # marketplaces bloqueiam scraping (403); mantenha mock
       - key: DATABASE_URL
