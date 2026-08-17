@@ -60,9 +60,17 @@ export default function App() {
   const [shareTitle, setShareTitle] = useState("");  // título do modal
   const [savedList, setSavedList] = useState(null);  // lista salva no navegador (retomar)
   const [listError, setListError] = useState(null);  // ex.: texto sem material odontológico
+  const [showAuth, setShowAuth] = useState(false);   // modal de login/cadastro
+  const listsRef = useRef(null);                     // acesso tardio ao useLists (definido abaixo)
 
   // Camada de rede (opcional) + motor local, dirigindo os setters de UI acima.
-  const backend = useBackend({ setStage, setProcStep, setItems: cart.setItems, setUnmatched, setDemo, setListError });
+  // onNeedAuth: foto/PDF exige login (o OCR é gated por conta). onOcrResult: adota a
+  // lista extraída da foto como lista de nuvem ativa (edições sincronizam ao vivo).
+  const backend = useBackend({
+    setStage, setProcStep, setItems: cart.setItems, setUnmatched, setDemo, setListError,
+    onNeedAuth: () => setShowAuth(true),
+    onOcrResult: (created) => listsRef.current?.adoptCloudList(created),
+  });
   const {
     apiBase, setApiBase, backendOn, conn, cep, setCep,
     remoteOpt, loadingRemote, backendError, showConn, setShowConn,
@@ -75,8 +83,8 @@ export default function App() {
   const online = useOnline();
   const install = useInstallPrompt();
   const { user, logout } = useAuth();
-  const [showAuth, setShowAuth] = useState(false);
   const lists = useLists(setItems, !!user);   // listas nomeadas (local + nuvem quando logado)
+  listsRef.current = lists;                   // expõe o useLists para callbacks do useBackend
   // Offline-first: aplica o catálogo cacheado do backend (se houver) na inicialização.
   useEffect(() => { loadCachedCatalog(); }, []);
 

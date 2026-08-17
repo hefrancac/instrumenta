@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { loadCollection, persistCollection, newId } from "../utils/persist";
-import { pushLocalLists, pullCloudLists } from "../utils/cloudSync";
+import { pushLocalLists, pullCloudLists, mapApiItems } from "../utils/cloudSync";
 import { apiV1 } from "../utils/apiBase";
 import { authHeader } from "../utils/authToken";
 
@@ -87,5 +87,26 @@ export function useLists(setItems, authed = false) {
     }
   };
 
-  return { lists, activeId, activeName: active?.name || null, activeItems: active?.items || [], saveActive, switchTo, createList, saveAsNew, rename, removeList };
+  // Adota uma lista recém-criada na nuvem (ex.: OCR de foto via POST /lists/upload)
+  // como a lista ativa, já com `cloudId` — assim as edições sincronizam ao vivo e o
+  // próximo pull da nuvem casa pelo cloudId (não duplica). `created` = UploadResponse.
+  const adoptCloudList = (created) => {
+    if (!created?.list_id) return null;
+    const entry = {
+      id: `cloud-${created.list_id}`,
+      cloudId: created.list_id,
+      name: created.name || "Lista da foto",
+      items: mapApiItems(created.items || [], created.list_id),
+      updatedAt: Date.now(),
+    };
+    setItems(entry.items);
+    setCol((c) => {
+      const base = c || { v: 1, activeId: null, lists: [] };
+      const rest = base.lists.filter((l) => l.cloudId !== entry.cloudId && l.id !== entry.id);
+      return { ...base, activeId: entry.id, lists: [...rest, entry] };
+    });
+    return entry.id;
+  };
+
+  return { lists, activeId, activeName: active?.name || null, activeItems: active?.items || [], saveActive, switchTo, createList, saveAsNew, rename, removeList, adoptCloudList };
 }

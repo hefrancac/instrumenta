@@ -8,7 +8,7 @@ import { cheapestBrandIndex } from "./engine";
 // reconstruindo marcas/preços a partir do catálogo (mesma lógica do useBackend).
 // `listCloudId` marca a qual lista de nuvem o item pertence — o patchRemote usa
 // isso para sincronizar edições (qtd/marca/owned) ao vivo.
-function mapApiItems(apiItems = [], listCloudId = null) {
+export function mapApiItems(apiItems = [], listCloudId = null) {
   return apiItems.map((ri) => {
     const c = CATALOG.find((x) => x.std === ri.standard_name);
     let brands, brandIndex;

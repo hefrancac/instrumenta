@@ -7,14 +7,14 @@ import { enqueue, drainQueue } from "../utils/syncQueue";
 import { syncCatalog } from "../utils/catalogCache";
 import { toast } from "../utils/toast";
 import { authHeader, clearToken, emitUnauthorized, getToken } from "../utils/authToken";
-import { apiV1 } from "../utils/apiBase";
+import { API_BASE, apiV1 } from "../utils/apiBase";
 
 const scrollTop = () => window.scrollTo({ top: 0 });
 
 // Toda a comunicação com o backend (opcional) + o motor local de fallback.
 // Recebe os setters de UI que precisa dirigir (estágio, progresso, itens, etc.),
 // mantendo a camada de rede fora dos componentes visuais.
-export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setDemo, setListError }) {
+export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setDemo, setListError, onNeedAuth, onOcrResult }) {
   const [apiBase, setApiBase] = useState("");
   const [backendOn, setBackendOn] = useState(false);
   const [conn, setConn] = useState("off");        // off | checking | ok | fail
@@ -142,20 +142,31 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
     setBackendError(null); setDemo(false);
     const isText = (file.type || "").startsWith("text/") || /\.(txt|csv)$/i.test(file.name);
 
-    if (!(backendOn && conn === "ok" && apiBase)) {
-      if (isText) { const t = await file.text(); localRun(t, false); }
-      else {
+    // Texto (arquivo .txt/.csv) roda local — não precisa de IA, igual ao colar lista.
+    if (isText) { const t = await file.text(); localRun(t, false); return; }
+
+    // Daqui pra baixo: foto ou PDF, que exige OCR por IA no backend. Preferir o backend
+    // deployado (API_BASE) com o token do usuário logado; senão, o painel manual.
+    const authed = !!(getToken() && API_BASE);
+    const manual = backendOn && conn === "ok" && apiBase;
+    if (!authed && !manual) {
+      if (API_BASE) {                          // backend existe, mas o OCR é gated por conta
+        setBackendError("Para ler foto ou PDF com IA, entre na sua conta primeiro.");
+        onNeedAuth?.();
+      } else {
         setShowConn(true);
         setBackendError("Para ler foto ou PDF é preciso um backend real (a IA faz o OCR). Conecte acima, ou envie a lista em texto.");
       }
       return;
     }
 
+    const root = authed ? apiV1() : V1();
     setStage("processing"); setProcStep(0);
-    [400, 900, 1400].forEach((t, i) => setTimeout(() => setProcStep(i + 1), t));
+    [400, 1200, 2400].forEach((t, i) => setTimeout(() => setProcStep(i + 1), t));
     try {
       const fd = new FormData(); fd.append("file", file);
-      const r = await fetch(`${V1()}/lists/upload`, { method: "POST", body: fd, headers: { ...authHeader(), "X-Idempotency-Key": newIdemKey() } });
+      const r = await fetch(`${root}/lists/upload`, { method: "POST", body: fd,
+        headers: { ...authHeader(), "X-Idempotency-Key": newIdemKey() } });
       if (r.status === 401) { clearToken(); emitUnauthorized(); }
       if (!r.ok) {
         let msg = "HTTP " + r.status;
@@ -164,13 +175,24 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
       }
       const created = await r.json();
       setListId(created.list_id);
-      for (let i = 0; i < 12; i++) {          // follow the worker's progress
-        try { const s = await jget(`${V1()}/lists/${created.list_id}/status`);
+
+      if (authed) {
+        // O backend deployado não tem worker: o OCR roda síncrono e os itens já vêm
+        // prontos na resposta — sem polling. Adota como lista de nuvem ativa.
+        if (onOcrResult) onOcrResult(created);
+        else setItems(mapRemoteItems(created.items));
+        setUnmatched([]); setRemoteOpt(null); setStage("review"); scrollTop();
+        return;
+      }
+
+      // Fluxo manual-connect (pode ter worker): acompanha o progresso do job.
+      for (let i = 0; i < 12; i++) {
+        try { const s = await jget(`${root}/lists/${created.list_id}/status`);
           setProcStep(Math.min(4, 1 + Math.round((s.progress || 0) * 3)));
           if (s.status === "done" || s.status === "error") break; } catch { /* keep going */ }
         await new Promise((res) => setTimeout(res, 600));
       }
-      const list = await jget(`${V1()}/lists/${created.list_id}`);
+      const list = await jget(`${root}/lists/${created.list_id}`);
       setItems(mapRemoteItems(list.items)); setUnmatched([]); setRemoteOpt(null);
       setStage("review"); scrollTop();
     } catch (e) {
