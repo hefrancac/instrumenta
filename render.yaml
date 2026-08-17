@@ -35,7 +35,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: CORS_ORIGINS
-        value: https://SEU-APP.vercel.app   # <-- troque pela URL real do frontend
+        value: https://instrumenta-amber.vercel.app   # URL real do frontend na Vercel
       - key: ANTHROPIC_API_KEY
         sync: false          # opcional (OCR/padronização por IA); deixe em branco p/ usar o matcher local
 
