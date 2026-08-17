@@ -44,10 +44,12 @@ class ItemUpdate(BaseModel):
 # ------------------------------ Upload --------------------------------
 class TextUploadRequest(BaseModel):
     text: str = Field(min_length=1)
+    name: Optional[str] = None
 
 
 class UploadResponse(BaseModel):
     list_id: int
+    name: str = "Minha lista"
     status: str
     item_count: int
     items: list[ItemOut]
@@ -64,8 +66,22 @@ class JobStatus(BaseModel):
 class ListDetail(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: int
+    name: str = "Minha lista"
     status: str
     items: list[ItemOut]
+
+
+# ------------------------------ Lists (nuvem) -------------------------
+class ListSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    name: str
+    status: str
+    item_count: int
+
+
+class ListUpdate(BaseModel):
+    name: str = Field(min_length=1, max_length=120)
 
 
 class ShareResponse(BaseModel):

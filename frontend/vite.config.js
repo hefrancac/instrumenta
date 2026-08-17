@@ -42,4 +42,6 @@ export default defineConfig({
     }),
   ],
   server: { port: 5173, host: true },
+  // Vitest roda os *.test.js unitários; os *.spec.js do Playwright (e2e/) ficam de fora.
+  test: { exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"] },
 })

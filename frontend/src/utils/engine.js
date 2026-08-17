@@ -58,13 +58,18 @@ export function editDistance(a, b) {
 // e apenas em palavras com >= 4 letras (evita casar ruído curto como "de", "un", "3m").
 const FUZZY_MIN_LEN = 4;
 const fuzzyMax = (len) => (len >= 8 ? 2 : 1);   // 2 edições só em palavras longas (evita casar "madura"→"madeira")
-const fuzzyTokens = (nrm) => (nrm.match(/[a-z0-9]+/g) || []).filter((t) => t.length >= FUZZY_MIN_LEN);
+
+// Allowlist de siglas odontológicas curtas (< FUZZY_MIN_LEN) que o motor deve aceitar
+// integralmente — sem afrouxar a regra geral que barra ruído curto genérico.
+const FUZZY_ALLOW = new Set(["civ", "irm", "zoe", "ppr", "epi", "rdc", "amf", "iv"]);
+const fuzzyOk = (w) => w.length >= FUZZY_MIN_LEN || FUZZY_ALLOW.has(w);
+const fuzzyTokens = (nrm) => (nrm.match(/[a-z0-9]+/g) || []).filter(fuzzyOk);
 
 // Quantas palavras-chave do item casam (com tolerância a erro) com os tokens da linha.
 function fuzzyItemScore(tokens, item) {
   let score = 0;
   for (const k of item.kw) {
-    const words = k.split(/\s+/).filter((w) => w.length >= FUZZY_MIN_LEN);
+    const words = k.split(/\s+/).filter(fuzzyOk);
     let hit = false;
     for (const w of words) {
       const md = fuzzyMax(w.length);
@@ -95,7 +100,7 @@ const planAScore = (nrm, item) => item.kw.reduce((acc, k) => acc + (nrm.includes
 // Quantos tokens da linha casam (fuzzy) com alguma palavra do NOME padronizado do item.
 // Usado só para desempatar candidatos ambíguos (ex.: "porta agulla" ~ "Porta-Agulha").
 function nameOverlap(tokens, item) {
-  const words = norm(item.std).split(/\s+/).filter((w) => w.length >= FUZZY_MIN_LEN);
+  const words = norm(item.std).split(/\s+/).filter(fuzzyOk);
   let s = 0;
   for (const t of tokens) {
     if (words.some((w) => {

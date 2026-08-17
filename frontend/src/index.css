@@ -56,3 +56,12 @@ body{ background:var(--bg); color:var(--ink); transition:background-color .2s ea
 /* Acessibilidade: foco visível para navegação por teclado (não aparece no clique de mouse). */
 :focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
 button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}
+
+/* Modal de compartilhar sobre <dialog> nativo (backdrop/scroll-lock/focus-trap do browser). */
+dialog.share-dialog{
+  width:calc(100% - 2rem); max-width:28rem;
+  border:0; padding:0; border-radius:1rem;
+  background:var(--card); color:var(--ink);
+  box-shadow:0 24px 60px rgba(0,0,0,.28);
+}
+dialog.share-dialog::backdrop{ background:rgba(12,43,41,.45); }

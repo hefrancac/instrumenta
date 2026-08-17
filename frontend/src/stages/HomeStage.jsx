@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import {
-  Upload, Camera, ScanLine, Sparkles, ClipboardPaste, Search, Wifi, X, Coins, ArrowRight,
+  Upload, Camera, ScanLine, Sparkles, ClipboardPaste, Search, Wifi, X, Coins, ArrowRight, Download, Share,
 } from "lucide-react";
 import { SAMPLE } from "../constants/catalog";
 
@@ -10,6 +10,7 @@ export default function HomeStage({
   savedList, onContinue, onDiscard,
   onRun, onRunFile, listError,
   apiBase, setApiBase, cep, setCep, conn, backendOn, backendError, connect, showConn, setShowConn,
+  installReady, iosHint, onInstall, onDismissInstall,
 }) {
   const [raw, setRaw] = useState(SAMPLE);
   const [showPaste, setShowPaste] = useState(false);
@@ -19,6 +20,42 @@ export default function HomeStage({
 
   return (
     <div className="fadeup">
+      {installReady && (
+        <div className="pop mb-4 flex items-center justify-between gap-3 rounded-2xl border p-3.5 bg-card border-line">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="rounded-xl flex items-center justify-center shrink-0 bg-primary-soft" style={{ width: 38, height: 38 }}>
+              <Download size={18} className="text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="ff-d text-sm font-semibold">Instale o app da Instrumenta</p>
+              <p className="ff-b text-xs text-ink-soft truncate">Funciona offline na clínica, direto da tela inicial.</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={onDismissInstall} aria-label="Dispensar" className="ff-b text-xs font-medium transition-all hover:opacity-70 text-ink-soft">Agora não</button>
+            <button onClick={onInstall}
+              className="ff-b inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-white text-sm font-semibold transition-all hover:opacity-90 bg-primary">
+              <Download size={15} /> Instalar
+            </button>
+          </div>
+        </div>
+      )}
+      {!installReady && iosHint && (
+        <div className="pop mb-4 flex items-start justify-between gap-3 rounded-2xl border p-3.5 bg-card border-line">
+          <div className="flex items-start gap-2.5 min-w-0">
+            <div className="rounded-xl flex items-center justify-center shrink-0 bg-primary-soft" style={{ width: 38, height: 38 }}>
+              <Share size={17} className="text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="ff-d text-sm font-semibold">Instale no seu iPhone</p>
+              <p className="ff-b text-xs text-ink-soft leading-snug">
+                Toque em <b>Compartilhar</b> <Share size={11} className="inline align-[-1px] text-ink-soft" /> e depois em <b>Adicionar à Tela de Início</b> — funciona offline na clínica.
+              </p>
+            </div>
+          </div>
+          <button onClick={onDismissInstall} aria-label="Dispensar" className="p-1 rounded-md hover:opacity-70 shrink-0"><X size={16} className="text-ink-soft" /></button>
+        </div>
+      )}
       {savedList && (
         <div className="pop mb-5 flex items-center justify-between gap-3 rounded-2xl border p-3.5 bg-primary-soft border-banner-line">
           <div>

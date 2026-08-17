@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user
 from app.database import get_db
 from app.models import ExtractedItem, Job, SupplyList, User
-from app.schemas import ItemOut, ItemUpdate, JobStatus, ListDetail
+from app.schemas import ItemOut, ItemUpdate, JobStatus, ListDetail, ListSummary, ListUpdate
 
 router = APIRouter(prefix="/lists", tags=["Lists"])
 
@@ -21,9 +21,36 @@ def _owned_list(db: Session, list_id: int, user: User) -> SupplyList:
     return supply
 
 
+def _summary(supply: SupplyList) -> ListSummary:
+    return ListSummary(id=supply.id, name=supply.name, status=supply.status, item_count=len(supply.items))
+
+
+@router.get("", response_model=list[ListSummary])
+def list_all(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Todas as listas do usuário logado (metadados) — o cliente usa para carregar a nuvem."""
+    rows = (db.query(SupplyList).filter(SupplyList.user_id == user.id)
+            .order_by(SupplyList.created_at.desc()).all())
+    return [_summary(s) for s in rows]
+
+
 @router.get("/{list_id}", response_model=ListDetail)
 def get_list(list_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     return _owned_list(db, list_id, user)
+
+
+@router.patch("/{list_id}", response_model=ListSummary)
+def rename_list(list_id: int, payload: ListUpdate,
+                db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    supply = _owned_list(db, list_id, user)
+    supply.name = payload.name
+    db.commit(); db.refresh(supply)
+    return _summary(supply)
+
+
+@router.delete("/{list_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_list(list_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    supply = _owned_list(db, list_id, user)
+    db.delete(supply); db.commit()
 
 
 @router.get("/{list_id}/status", response_model=JobStatus)

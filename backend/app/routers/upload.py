@@ -3,11 +3,12 @@ from __future__ import annotations
 
 import logging
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Header, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.deps import get_current_user
+from app.core.idempotency import get_cached, store
 from app.database import get_db
 from app.models import ExtractedItem, Job, SupplyList, User
 from app.schemas import TextUploadRequest, UploadResponse
@@ -19,11 +20,11 @@ router = APIRouter(prefix="/lists", tags=["Lists"])
 _ALLOWED_MIME = ("text/", "image/", "application/pdf")
 
 
-def _persist_and_dispatch(db: Session, user: User, matched) -> SupplyList:
+def _persist_and_dispatch(db: Session, user: User, matched, name: str | None = None) -> SupplyList:
     if not matched:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY,
                             "Nenhum item reconhecido na lista.")
-    supply = SupplyList(user_id=user.id, status="processing")
+    supply = SupplyList(user_id=user.id, name=(name or "Minha lista"), status="processing")
     db.add(supply)
     db.flush()  # get supply.id without a second round-trip
 
@@ -53,7 +54,12 @@ async def upload_list(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    x_idempotency_key: str | None = Header(default=None),
 ):
+    idem = f"{user.id}:{x_idempotency_key}" if x_idempotency_key else None   # escopo por usuário
+    cached = get_cached(idem)
+    if cached is not None:                       # replay: mesma chave -> mesma resposta
+        return UploadResponse.model_validate(cached)
     mime = file.content_type or ""
     if not mime.startswith(_ALLOWED_MIME):
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
@@ -71,8 +77,10 @@ async def upload_list(
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc))
 
     supply = _persist_and_dispatch(db, user, matched)
-    return UploadResponse(list_id=supply.id, status=supply.status,
+    resp = UploadResponse(list_id=supply.id, name=supply.name, status=supply.status,
                           item_count=len(supply.items), items=supply.items)
+    store(idem, resp.model_dump())
+    return resp
 
 
 @router.post("/text", response_model=UploadResponse, status_code=201)
@@ -80,9 +88,16 @@ def upload_text(
     payload: TextUploadRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
+    x_idempotency_key: str | None = Header(default=None),
 ):
     """Convenience endpoint for the paste-a-list flow (no file needed)."""
+    idem = f"{user.id}:{x_idempotency_key}" if x_idempotency_key else None   # escopo por usuário
+    cached = get_cached(idem)
+    if cached is not None:                       # replay: mesma chave -> mesma resposta
+        return UploadResponse.model_validate(cached)
     matched = ai_service.extract_items(text=payload.text)
-    supply = _persist_and_dispatch(db, user, matched)
-    return UploadResponse(list_id=supply.id, status=supply.status,
+    supply = _persist_and_dispatch(db, user, matched, payload.name)
+    resp = UploadResponse(list_id=supply.id, name=supply.name, status=supply.status,
                           item_count=len(supply.items), items=supply.items)
+    store(idem, resp.model_dump())
+    return resp

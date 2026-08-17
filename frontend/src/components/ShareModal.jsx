@@ -1,34 +1,34 @@
 import { useEffect, useRef } from "react";
 import { X, ClipboardPaste } from "lucide-react";
 
-// Modal de compartilhar/copiar. Faz focus-trap (Tab não escapa para trás do overlay)
-// e fecha no Escape — navegação por teclado acessível.
+// Modal de compartilhar/copiar sobre <dialog> nativo: o browser entrega backdrop,
+// bloqueio de scroll de fundo e focus-trap. O fechamento é feito desmontando o
+// componente (onClose) em todos os caminhos — botão, clique no backdrop e Escape
+// (evento 'cancel') — sem depender do evento 'close' do <dialog>.
 export default function ShareModal({ title, text, onClose }) {
   const ref = useRef(null);
+  const cb = useRef(onClose);
+  useEffect(() => { cb.current = onClose; }, [onClose]);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const focusables = () => [...el.querySelectorAll('button, textarea, a[href], input, [tabindex]:not([tabindex="-1"])')];
-    focusables()[0]?.focus();
-    const onKey = (e) => {
-      if (e.key === "Escape") { onClose(); return; }
-      if (e.key !== "Tab") return;
-      const f = focusables();
-      if (!f.length) return;
-      const first = f[0], last = f[f.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    };
-    el.addEventListener("keydown", onKey);
-    return () => el.removeEventListener("keydown", onKey);
-  }, [onClose]);
+    const d = ref.current;
+    if (d && !d.open) d.showModal();
+    const onCancel = (e) => { e.preventDefault(); cb.current(); };   // Escape
+    d?.addEventListener("cancel", onCancel);
+    return () => d?.removeEventListener("cancel", onCancel);
+  }, []);
+
+  // Clique fora do card (na área do ::backdrop) fecha.
+  const onClick = (e) => {
+    const d = ref.current;
+    if (!d) return;
+    const r = d.getBoundingClientRect();
+    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-end sm:items-center justify-center p-4"
-      style={{ background: "rgba(12,43,41,.45)" }} onClick={onClose}
-      role="dialog" aria-modal="true" aria-label={title}>
-      <div ref={ref} className="pop w-full max-w-md rounded-2xl p-4 bg-card"
-        onClick={(e) => e.stopPropagation()}>
+    <dialog ref={ref} onClick={onClick} aria-label={title} className="share-dialog pop">
+      <div className="p-4">
         <div className="flex items-center justify-between mb-1">
           <p className="ff-d text-base font-bold">{title}</p>
           <button onClick={onClose} aria-label="fechar" className="hover:opacity-70">
@@ -45,6 +45,6 @@ export default function ShareModal({ title, text, onClose }) {
           <ClipboardPaste size={16} /> Copiar de novo
         </button>
       </div>
-    </div>
+    </dialog>
   );
 }

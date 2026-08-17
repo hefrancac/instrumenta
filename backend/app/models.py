@@ -55,6 +55,7 @@ class SupplyList(Base):
     __tablename__ = "supply_lists"
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    name = Column(String(120), default="Minha lista", nullable=False)
     status = Column(String(20), default="pending", nullable=False)
     share_token = Column(String(48), unique=True, index=True, nullable=True)
     is_public = Column(Boolean, default=False, nullable=False)

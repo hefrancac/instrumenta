@@ -1,21 +1,33 @@
-import { useState, useMemo, useEffect, useRef } from "react";
-import { Sun, Moon } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Sun, Moon, CloudOff, LogIn, LogOut } from "lucide-react";
 import "./index.css";
 import { CATALOG } from "./constants/catalog";
 import { brl } from "./utils/format";
 import { brandMin, cheapestBrandIndex, optimize } from "./utils/engine";
+import { API_BASE } from "./utils/apiBase";
+import { useAuth } from "./contexts/AuthContext";
 import Logo from "./components/Logo";
 import Stepper from "./components/Stepper";
 import ReviewBar from "./components/ReviewBar";
 import ResultsBar from "./components/ResultsBar";
 import ShareModal from "./components/ShareModal";
+import AuthModal from "./components/AuthModal";
+import ListManager from "./components/ListManager";
+import Toaster from "./components/Toaster";
 import { useCart } from "./hooks/useCart";
+import { useCartSync } from "./hooks/useCartSync";
 import { useBackend } from "./hooks/useBackend";
-import { saveList, loadList, clearList, encodeList, decodeList } from "./utils/persist";
+import { useLists } from "./hooks/useLists";
+import { useOnline } from "./hooks/useOnline";
+import { useInstallPrompt } from "./hooks/useInstallPrompt";
+import { encodeList, decodeList } from "./utils/persist";
+import { toast } from "./utils/toast";
+import { loadCachedCatalog } from "./utils/catalogCache";
 import HomeStage from "./stages/HomeStage";
 import ProcessingStage from "./stages/ProcessingStage";
 import ReviewStage from "./stages/ReviewStage";
 import ResultsStage from "./stages/ResultsStage";
+import OptimizerWorker from "./workers/optimizer.worker.js?worker";
 
 // Controlador: detém o estado compartilhado e roteia entre os estágios da tela.
 // A UI de cada estágio vive em src/stages/, e a rede em src/hooks/useBackend.
@@ -37,9 +49,7 @@ export default function App() {
   }, [theme]);
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
-  const patchRemoteRef = useRef(() => {});   // ligado ao patchRemote do useBackend
-  const { items, setItems, setBrand, toggleOwned, setQty, remove, setProduct } =
-    useCart((it, patch) => patchRemoteRef.current(it, patch));
+  const cart = useCart();   // estado puro; a sincronização com o backend é feita abaixo
 
   const [unmatched, setUnmatched] = useState([]);
   const [demo, setDemo] = useState(false);
@@ -52,17 +62,53 @@ export default function App() {
   const [listError, setListError] = useState(null);  // ex.: texto sem material odontológico
 
   // Camada de rede (opcional) + motor local, dirigindo os setters de UI acima.
-  const backend = useBackend({ setStage, setProcStep, setItems, setUnmatched, setDemo, setListError });
+  const backend = useBackend({ setStage, setProcStep, setItems: cart.setItems, setUnmatched, setDemo, setListError });
   const {
     apiBase, setApiBase, backendOn, conn, cep, setCep,
     remoteOpt, loadingRemote, backendError, showConn, setShowConn,
     connect, run, runFile, goToResults, patchRemote,
   } = backend;
-  // Mantém a ref com o patchRemote atual sem mutar ref durante o render.
-  useEffect(() => { patchRemoteRef.current = patchRemote; });
+
+  // Casa o estado do carrinho (puro) com o PATCH remoto — sem "latest ref".
+  const { items, setItems, setBrand, toggleOwned, setQty, remove, setProduct } = useCartSync(cart, patchRemote);
+
+  const online = useOnline();
+  const install = useInstallPrompt();
+  const { user, logout } = useAuth();
+  const [showAuth, setShowAuth] = useState(false);
+  const lists = useLists(setItems, !!user);   // listas nomeadas (local + nuvem quando logado)
+  // Offline-first: aplica o catálogo cacheado do backend (se houver) na inicialização.
+  useEffect(() => { loadCachedCatalog(); }, []);
 
   const step = stage === "results" ? 2 : stage === "review" ? 1 : 0;
-  const localOpt = useMemo(() => (items.length ? optimize(items) : null), [items]);
+
+  // Otimizador roda em Web Worker (fora da main thread) para a UI seguir a 60 FPS.
+  // Mantém o resultado anterior enquanto recalcula (não pisca a tela); cai para o
+  // cálculo síncrono se o ambiente não suportar workers.
+  const [localOpt, setLocalOpt] = useState(null);
+  const optWorker = useRef(null);
+  const jobIdRef = useRef(0);
+  useEffect(() => {
+    try { optWorker.current = new OptimizerWorker(); }
+    catch { optWorker.current = null; }
+    return () => optWorker.current?.terminate();
+  }, []);
+  useEffect(() => {
+    if (!items.length) { setLocalOpt(null); return; }
+    const w = optWorker.current;
+    const id = ++jobIdRef.current;                       // ticket desta requisição
+    if (!w) { setLocalOpt(optimize(items)); return; }    // ambiente sem worker
+    let done = false;
+    // Só aplica a resposta se o jobId bater com o pedido mais recente (evita
+    // que uma otimização antiga sobrescreva uma mais nova — condição de corrida).
+    const onMsg = (e) => { if (e.data?.ok && e.data.jobId === id) { done = true; setLocalOpt(e.data.opt); } };
+    w.addEventListener("message", onMsg);
+    // Rede de segurança: se o worker não responder (ex.: não carregou no artifact
+    // de arquivo único), calcula síncrono — desde que ainda seja o job mais recente.
+    const t = setTimeout(() => { if (!done && jobIdRef.current === id) setLocalOpt(optimize(items)); }, 150);
+    w.postMessage({ items, jobId: id });
+    return () => { clearTimeout(t); w.removeEventListener("message", onMsg); };
+  }, [items]);
   const opt = (backendOn && remoteOpt) ? remoteOpt : localOpt;
 
   const activeCount = items.filter((i) => !i.owned).length;
@@ -81,11 +127,10 @@ export default function App() {
         return;
       }
     }
-    const saved = loadList();
-    if (saved && saved.length) setSavedList(saved);
+    if (lists.activeItems.length) setSavedList(lists.activeItems);
   }, []); // eslint-disable-line
-  // Salva a lista sempre que muda (para não perder ao recarregar).
-  useEffect(() => { if (items.length) saveList(items); }, [items]);
+  // Salva a lista ativa sempre que muda (para não perder ao recarregar).
+  useEffect(() => { if (items.length) lists.saveActive(items); }, [items]); // eslint-disable-line
 
   // Ao entrar em resultados, escolhe a view recomendada e abre a melhor loja.
   useEffect(() => {
@@ -93,13 +138,14 @@ export default function App() {
       setView(opt.recommendMulti ? "multi" : "single");
       setOpenStore((opt.cheapestFull || opt.bestSingle).store.id);
     }
-  }, [stage, remoteOpt]); // eslint-disable-line
+  }, [stage, opt]); // eslint-disable-line
 
   function openShareLink() {
     const url = `${window.location.origin}${window.location.pathname}#lista=${encodeList(items)}`;
     setShareTitle("Link da sua lista");
     setShareText(url);
     if (navigator.clipboard) navigator.clipboard.writeText(url).catch(() => {});
+    toast("Link copiado");
   }
 
   // Monta um texto de "lista de compras por loja" para o aluno copiar e colar na dental.
@@ -129,6 +175,7 @@ export default function App() {
     setShareTitle("Sua lista de compras");
     setShareText(t);
     if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {});
+    toast("Lista copiada");
   }
 
   // Resolve uma linha não reconhecida: o aluno escolhe o produto do catálogo.
@@ -139,7 +186,14 @@ export default function App() {
       brands: c.brands, brandIndex: cheapestBrandIndex(c), owned: false, qty: 1 };
     setItems((p) => [...p, it]);
     setUnmatched((p) => p.filter((u) => u !== raw));
+    toast(`Adicionado: ${c.std}`);
   }
+
+  // --- Gerenciamento de listas (troca navega para a revisão) ---
+  const switchList = (id) => { lists.switchTo(id); setSavedList(null); setStage("review"); window.scrollTo({ top: 0 }); toast("Lista aberta"); };
+  const newList = (name) => { lists.createList(name); setUnmatched([]); setSavedList(null); setStage("home"); toast(`Lista "${name}" criada`); };
+  const saveListAs = () => { const n = `Lista ${lists.lists.length + 1}`; lists.saveAsNew(n, items); toast(`Salva como "${n}"`); };
+  const deleteList = (id) => { lists.removeList(id); toast("Lista excluída", { type: "info" }); };
 
   return (
     <div className="ff-b min-h-screen w-full bg-canvas text-ink">
@@ -149,7 +203,22 @@ export default function App() {
         <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
           <button onClick={() => setStage("home")} className="transition-all hover:opacity-80"><Logo /></button>
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {stage !== "home" && <Stepper step={step} />}
+            {stage !== "home" && <div className="hidden sm:block"><Stepper step={step} /></div>}
+            {!online && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium bg-amber-soft text-amber-dk"
+                title="Você está offline — dá para continuar editando sua lista">
+                <CloudOff size={13} /> <span className="hidden sm:inline">offline</span>
+              </span>
+            )}
+            <ListManager lists={lists.lists} activeId={lists.activeId} activeName={lists.activeName}
+              itemCount={items.length} onSwitch={switchList} onCreate={newList} onSaveAs={saveListAs}
+              onRename={lists.rename} onDelete={deleteList} />
+            {API_BASE && (user
+              ? <button onClick={logout} title={`Sair (${user.email})`} aria-label={`Sair — ${user.email}`}
+                  className="p-2 rounded-lg transition-all hover:opacity-80 shrink-0 text-primary"><LogOut size={18} /></button>
+              : <button onClick={() => setShowAuth(true)} title="Entrar" aria-label="Entrar"
+                  className="p-2 rounded-lg transition-all hover:opacity-80 shrink-0 text-ink-soft"><LogIn size={18} /></button>
+            )}
             <button onClick={toggleTheme} aria-label="Alternar tema claro e escuro"
               title={theme === "dark" ? "Mudar para tema claro" : "Mudar para tema escuro"}
               className="p-2 rounded-lg transition-all hover:opacity-80 shrink-0 text-ink-soft">
@@ -164,7 +233,8 @@ export default function App() {
           <HomeStage
             savedList={savedList}
             onContinue={() => { setItems(savedList); setSavedList(null); setStage("review"); window.scrollTo({ top: 0 }); }}
-            onDiscard={() => { clearList(); setSavedList(null); }}
+            onDiscard={() => setSavedList(null)}
+            installReady={install.canInstall} iosHint={install.iosHint} onInstall={install.install} onDismissInstall={install.dismiss}
             onRun={run} onRunFile={runFile} listError={listError}
             apiBase={apiBase} setApiBase={setApiBase} cep={cep} setCep={setCep}
             conn={conn} backendOn={backendOn} backendError={backendError}
@@ -201,6 +271,9 @@ export default function App() {
       )}
 
       {shareText && <ShareModal title={shareTitle} text={shareText} onClose={() => setShareText(null)} />}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
+
+      <Toaster />
     </div>
   );
 }

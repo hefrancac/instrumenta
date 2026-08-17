@@ -12,7 +12,7 @@ from app.database import get_db
 from app.models import User
 
 # auto_error=False so we can implement the demo-mode fallback ourselves.
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/login", auto_error=False)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_PREFIX}/auth/token", auto_error=False)
 
 
 def _get_or_create_demo_user(db: Session) -> User:

@@ -1,6 +1,8 @@
-// Catálogo canônico de material odontológico (gerado a partir do backend).
-// prices = null significa que a loja não tem o item.
-export const CATALOG = [
+// Catálogo canônico de material odontológico (bundlado; o backend pode atualizar em runtime).
+// prices = null/ausente significa que a loja não tem o item.
+// `let` + live binding: replaceCatalog() troca a referência e TODOS os consumidores
+// (matcher, ProductPicker, decode) passam a ler o catálogo novo, sem refatorar imports.
+export let CATALOG = [
   { id: "espelho", std: "Espelho Bucal Plano nº 5", cat: "Instrumental", kw: ["espelho", "bucal"],
     brands: [{ name: "Golgran", prices: { cremer: 14.9, surya: 13.41, speed: 15.65 } }, { name: "Genérico", prices: { cremer: 8.9, surya: 8.01, speed: 9.35 } }] },
   { id: "cabo-esp", std: "Cabo para Espelho Bucal", cat: "Instrumental", kw: ["cabo", "espelho"],
@@ -37,7 +39,7 @@ export const CATALOG = [
     brands: [{ name: "SS White", prices: { cremer: 19.9, surya: 17.91, speed: 20.89 } }] },
   { id: "resina", std: "Resina Composta Z350 XT (A2)", cat: "Material", kw: ["resina", "z350", "filtek"],
     brands: [{ name: "3M Filtek", prices: { cremer: 129.9, surya: 116.91, speed: 136.4 } }, { name: "FGM Opallis", prices: { cremer: 79.9, surya: 71.91, speed: 83.9 } }] },
-  { id: "ionomero", std: "Ionômero de Vidro Restaurador", cat: "Material", kw: ["ionomero", "vidrion", "ketac", "maxxion"],
+  { id: "ionomero", std: "Ionômero de Vidro Restaurador", cat: "Material", kw: ["ionomero", "ionomero de vidro", "civ", "vidrion", "ketac", "maxxion"],
     brands: [{ name: "3M Ketac", prices: { cremer: 89.9, surya: 80.91, speed: null } }, { name: "SS White Vidrion", prices: { cremer: 44.9, surya: 40.41, speed: null } }] },
   { id: "adesivo", std: "Sistema Adesivo (Single Bond)", cat: "Material", kw: ["adesivo", "single", "bond", "ambar"],
     brands: [{ name: "3M Single Bond", prices: { cremer: 99.9, surya: 89.91, speed: null } }, { name: "FGM Ambar", prices: { cremer: 64.9, surya: 58.41, speed: null } }] },
@@ -210,3 +212,10 @@ kit de brocas diamantadas
 lençol de borracha (dique)
 discos sof-lex
 fio de sutura seda 4-0`;
+
+// Troca o catálogo ativo em runtime (do backend). Como CATALOG é `let` exportado,
+// os consumidores que leem no momento do uso passam a enxergar o novo catálogo.
+export function replaceCatalog(items) {
+  if (Array.isArray(items) && items.length) CATALOG = items;
+}
+

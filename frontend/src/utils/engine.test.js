@@ -36,6 +36,20 @@ describe("fuzzyMatch (Plano B — tolerância a erro de digitação)", () => {
   });
 });
 
+describe("siglas odontológicas curtas (allowlist)", () => {
+  it("reconhece 'civ' como Ionômero de Vidro", () => {
+    const { matched } = parseList("civ");
+    expect(matched).toHaveLength(1);
+    expect(matched[0].std).toMatch(/Ionômero/);
+  });
+  it("fuzzy aceita a sigla curta permitida (não barra por tamanho < 4)", () => {
+    expect(fuzzyMatch("civ")?.std).toMatch(/Ionômero/);
+  });
+  it("segue barrando ruído curto NÃO allowlistado", () => {
+    expect(fuzzyMatch("xkq")).toBeNull();
+  });
+});
+
 describe("parseList", () => {
   it("reconhece um item conhecido", () => {
     const { matched } = parseList("espelho bucal n5");

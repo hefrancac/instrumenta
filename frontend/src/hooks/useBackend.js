@@ -1,8 +1,13 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { CATALOG } from "../constants/catalog";
 import { storeById } from "../constants/stores";
 import { P } from "../constants/theme";
 import { cheapestBrandIndex, parseList } from "../utils/engine";
+import { enqueue, drainQueue } from "../utils/syncQueue";
+import { syncCatalog } from "../utils/catalogCache";
+import { toast } from "../utils/toast";
+import { authHeader, clearToken, emitUnauthorized, getToken } from "../utils/authToken";
+import { apiV1 } from "../utils/apiBase";
 
 const scrollTop = () => window.scrollTo({ top: 0 });
 
@@ -24,18 +29,34 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
   const catByStd = useMemo(() => Object.fromEntries(CATALOG.map((c) => [c.std, c])), []);
   const apiRoot = () => apiBase.replace(/\/+$/, "");
   const V1 = () => `${apiRoot()}/api/v1`;
-  const jget = async (url, signal) => { const r = await fetch(url, signal ? { signal } : undefined); if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); };
-  const jsend = async (url, method, body) => {
-    const r = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined });
-    if (!r.ok) throw new Error("HTTP " + r.status);
+  // Em 401: token inválido/expirado -> limpa e avisa o AuthContext (logout).
+  const on401 = (r) => { if (r.status === 401) { clearToken(); emitUnauthorized(); } };
+  const jget = async (url, signal) => {
+    const r = await fetch(url, { headers: authHeader(), ...(signal ? { signal } : {}) });
+    if (!r.ok) { on401(r); throw new Error("HTTP " + r.status); }
+    return r.json();
+  };
+  const jsend = async (url, method, body, extraHeaders) => {
+    const r = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json", ...authHeader(), ...(extraHeaders || {}) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!r.ok) { on401(r); throw new Error("HTTP " + r.status); }
     return r.status === 204 ? null : r.json();
   };
+  // Chave de idempotência: se o POST for reenviado, o backend não cria lista duplicada.
+  const newIdemKey = () => (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
   async function connect() {
     if (!apiBase) { setConn("fail"); setBackendError("Informe a URL do backend (ex.: http://localhost:8000)."); return; }
     setConn("checking"); setBackendError(null);
-    try { await jget(`${apiRoot()}/health`); setConn("ok"); setBackendOn(true); }
-    catch { setConn("fail"); setBackendOn(false); setBackendError("Não consegui conectar. Verifique a URL e o CORS do backend."); }
+    try {
+      await jget(`${apiRoot()}/health`);
+      setConn("ok"); setBackendOn(true);
+      // Sincroniza o catálogo (novos produtos/marcas do backend) — só baixa se o hash mudou.
+      syncCatalog(apiRoot()).then((r) => { if (r?.updated) toast(`Catálogo atualizado (${r.count} itens)`); }).catch(() => {});
+    } catch { setConn("fail"); setBackendOn(false); setBackendError("Não consegui conectar. Verifique a URL e o CORS do backend."); }
   }
 
   const mapRemoteItems = (apiItems) => (apiItems || []).map((ri) => {
@@ -97,7 +118,7 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
     setStage("processing"); setProcStep(0);
     [400, 900, 1400].forEach((t, i) => setTimeout(() => setProcStep(i + 1), t));
     try {
-      const created = await jsend(`${V1()}/lists/text`, "POST", { text });
+      const created = await jsend(`${V1()}/lists/text`, "POST", { text }, { "X-Idempotency-Key": newIdemKey() });
       setListId(created.list_id);
       for (let i = 0; i < 8; i++) {          // best-effort progress from the worker
         try { const s = await jget(`${V1()}/lists/${created.list_id}/status`);
@@ -134,7 +155,8 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
     [400, 900, 1400].forEach((t, i) => setTimeout(() => setProcStep(i + 1), t));
     try {
       const fd = new FormData(); fd.append("file", file);
-      const r = await fetch(`${V1()}/lists/upload`, { method: "POST", body: fd });
+      const r = await fetch(`${V1()}/lists/upload`, { method: "POST", body: fd, headers: { ...authHeader(), "X-Idempotency-Key": newIdemKey() } });
+      if (r.status === 401) { clearToken(); emitUnauthorized(); }
       if (!r.ok) {
         let msg = "HTTP " + r.status;
         try { const j = await r.json(); msg = j?.detail || j?.error?.message || msg; } catch { /* ignore */ }
@@ -174,11 +196,44 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
     }
   }
 
-  // Sincroniza a edição de um item com o backend (fire-and-forget; no-op em modo local).
+  // Sincroniza a edição de um item com o backend. Se a requisição falhar (rede caiu),
+  // a ação vai para a fila de sincronização e sobe quando a conexão voltar.
   const patchRemote = (it, patch) => {
-    if (backendOn && conn === "ok" && listId && it.remoteId)
-      jsend(`${V1()}/lists/${listId}/items/${it.remoteId}`, "PATCH", patch).catch(() => {});
+    if (!it.remoteId) return;
+    // Fluxo autenticado: item de lista de nuvem -> PATCH direto (Bearer via jsend).
+    if (getToken() && it.listCloudId) {
+      const url = `${apiV1()}/lists/${it.listCloudId}/items/${it.remoteId}`;
+      jsend(url, "PATCH", patch).catch(() => enqueue({ url, method: "PATCH", body: patch }));
+      return;
+    }
+    // Fluxo demo-connect (URL digitada no painel).
+    if (backendOn && conn === "ok" && listId) {
+      const url = `${V1()}/lists/${listId}/items/${it.remoteId}`;
+      jsend(url, "PATCH", patch).catch(() => enqueue({ url, method: "PATCH", body: patch }));
+    }
   };
+
+  // Ao voltar online (e com backend conectado), drena a fila de patches pendentes.
+  useEffect(() => {
+    const onOnline = () => {
+      if (getToken() || (backendOn && conn === "ok")) drainQueue((a) => jsend(a.url, a.method, a.body));
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [backendOn, conn]); // eslint-disable-line
+
+  // Invalidação reativa do catálogo: enquanto conectado, checa o hash a cada 5 min e
+  // ao a aba voltar ao foco. syncCatalog só baixa se o hash mudou (barato).
+  useEffect(() => {
+    if (!(backendOn && conn === "ok")) return;
+    const check = () => syncCatalog(apiRoot())
+      .then((r) => { if (r?.updated) toast(`Catálogo atualizado (${r.count} itens)`); })
+      .catch(() => {});
+    const interval = setInterval(check, 5 * 60 * 1000);
+    const onVisible = () => { if (document.visibilityState === "visible") check(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+  }, [backendOn, conn]); // eslint-disable-line
 
   return {
     apiBase, setApiBase, backendOn, conn, cep, setCep, listId,

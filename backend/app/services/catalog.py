@@ -85,7 +85,7 @@ CATALOG: list[ProductDef] = [
                _p(Brand("SS White", 19.90))),
     ProductDef("resina", "Resina Composta Z350 XT (A2)", "Material", ("resina", "z350", "filtek"),
                _p(Brand("3M Filtek", 129.90, True), Brand("FGM Opallis", 79.90))),
-    ProductDef("ionomero", "Ionômero de Vidro Restaurador", "Material", ("ionomero", "vidrion", "ketac", "maxxion"),
+    ProductDef("ionomero", "Ionômero de Vidro Restaurador", "Material", ("ionomero", "ionomero de vidro", "civ", "vidrion", "ketac", "maxxion"),
                _p(Brand("3M Ketac", 89.90, True), Brand("SS White Vidrion", 44.90))),
     ProductDef("adesivo", "Sistema Adesivo (Single Bond)", "Material", ("adesivo", "single", "bond", "ambar"),
                _p(Brand("3M Single Bond", 99.90, True), Brand("FGM Ambar", 64.90))),
