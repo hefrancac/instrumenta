@@ -38,6 +38,8 @@ services:
         value: https://instrumenta-amber.vercel.app   # URL real do frontend na Vercel
       - key: ANTHROPIC_API_KEY
         sync: false          # opcional (OCR/padronização por IA); deixe em branco p/ usar o matcher local
+      - key: LLM_MODEL
+        value: claude-sonnet-5   # modelo de visão p/ o OCR; troque p/ claude-haiku-4-5-20251001 se quiser mais barato
 
   # OBS: o worker Celery (Dockerfile.worker) foi removido do blueprint porque o
   # plano free do Render não permite "background worker". Como SCRAPER_MODE=mock e

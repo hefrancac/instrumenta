@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str | None = None
     # Set to a current model string from your Anthropic console. When no key is
     # configured the service falls back to the local keyword matcher.
-    LLM_MODEL: str = "claude-sonnet-4-5"
+    LLM_MODEL: str = "claude-sonnet-5"
     LLM_MAX_TOKENS: int = 2000
 
     # -- Marketplace (Mercado Livre) ------------------------------------
