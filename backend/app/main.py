@@ -15,7 +15,7 @@ from slowapi.util import get_remote_address
 from app.core.config import settings
 from app.core.logging import configure_logging, new_request_id, request_id_ctx
 from app.database import Base, engine
-from app.routers import admin, auth, cart, catalog, go, lists, share, upload
+from app.routers import admin, auth, cart, catalog, go, lists, prices, share, upload
 
 log = logging.getLogger("app")
 limiter = Limiter(key_func=get_remote_address, default_limits=["200/minute"])
@@ -118,5 +118,5 @@ def health():
 
 # -- Routers (versioned) -----------------------------------------------
 for r in (auth.router, upload.router, lists.router, cart.router,
-          catalog.router, share.router, go.router, admin.router):
+          catalog.router, prices.router, share.router, go.router, admin.router):
     app.include_router(r, prefix=settings.API_PREFIX)
