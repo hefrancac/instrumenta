@@ -1,0 +1,51 @@
+{
+  "site_id": "MLB",
+  "query": "sonda exploradora odontologico",
+  "paging": { "total": 213, "primary_results": 213, "offset": 0, "limit": 5 },
+  "results": [
+    {
+      "id": "MLB1111111111",
+      "title": "Sonda Exploradora Nº 5 Odontológica Golgran Inox",
+      "price": 12.9,
+      "currency_id": "BRL",
+      "available_quantity": 50,
+      "condition": "new",
+      "permalink": "https://produto.mercadolivre.com.br/MLB-1111111111-sonda-exploradora-n5-golgran",
+      "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_111111-MLB.jpg",
+      "shipping": { "free_shipping": true }
+    },
+    {
+      "id": "MLB2222222222",
+      "title": "Kit 3 Sondas Exploradoras Nº 5 Duflex Odontologia",
+      "price": 29.9,
+      "currency_id": "BRL",
+      "available_quantity": 12,
+      "condition": "new",
+      "permalink": "https://produto.mercadolivre.com.br/MLB-2222222222-kit-3-sondas-exploradoras-duflex",
+      "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_222222-MLB.jpg",
+      "shipping": { "free_shipping": false }
+    },
+    {
+      "id": "MLB3333333333",
+      "title": "Sonda Exploradora Periodontal Milimetrada Quinelato",
+      "price": 18.5,
+      "currency_id": "BRL",
+      "available_quantity": 0,
+      "condition": "new",
+      "permalink": "https://produto.mercadolivre.com.br/MLB-3333333333-sonda-milimetrada-quinelato",
+      "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_333333-MLB.jpg",
+      "shipping": { "free_shipping": true }
+    },
+    {
+      "id": "MLB4444444444",
+      "title": "Capa Protetora Para Celular Samsung Galaxy",
+      "price": 4.99,
+      "currency_id": "BRL",
+      "available_quantity": 999,
+      "condition": "new",
+      "permalink": "https://produto.mercadolivre.com.br/MLB-4444444444-capa-celular",
+      "thumbnail": "https://http2.mlstatic.com/D_NQ_NP_444444-MLB.jpg",
+      "shipping": { "free_shipping": true }
+    }
+  ]
+}

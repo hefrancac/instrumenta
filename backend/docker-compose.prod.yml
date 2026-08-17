@@ -1,0 +1,25 @@
+# Production overrides:  docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Runs migrations then gunicorn; no source mounts; seeding off.
+services:
+  api:
+    command: sh -c "alembic upgrade head && gunicorn app.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000 -w 4 --timeout 60 --access-logfile -"
+    environment:
+      ENV: prod
+      DEBUG: "false"
+      DEMO_MODE: "false"
+      AUTO_CREATE_TABLES: "false"
+      SEED_ON_STARTUP: "false"
+    volumes: []
+    restart: unless-stopped
+
+  worker:
+    environment:
+      ENV: prod
+      SCRAPER_MODE: live
+    volumes: []
+    restart: unless-stopped
+
+  db:
+    restart: unless-stopped
+  redis:
+    restart: unless-stopped

@@ -1,0 +1,19 @@
+# Worker image — Playwright base ships the browsers preinstalled.
+FROM mcr.microsoft.com/playwright/python:v1.47.0-jammy
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+COPY app ./app
+COPY worker ./worker
+
+RUN useradd --create-home appuser && chown -R appuser:appuser /app
+USER appuser
+
+CMD ["celery", "-A", "worker.celery_app", "worker", "--loglevel=info", "--concurrency=4"]

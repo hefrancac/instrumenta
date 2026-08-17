@@ -1,0 +1,57 @@
+# Render Blueprint — backend do Instrumenta (opcional: o app funciona 100% em modo demo sem ele).
+# Como usar: no Render, "New +" → "Blueprint" → aponte para o repositório.
+# Depois preencha CORS_ORIGINS com a URL do seu frontend na Vercel.
+databases:
+  - name: instrumenta-db
+    databaseName: instrumenta
+    plan: free
+
+services:
+  # Cache/fila (Celery) — Redis gerenciado
+  - type: redis
+    name: instrumenta-redis
+    plan: free
+    ipAllowList: []          # apenas serviços internos do Render acessam
+
+  # API FastAPI
+  - type: web
+    name: instrumenta-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.api
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ENV
+        value: prod
+      - key: DEMO_MODE
+        value: "true"        # deixa o front funcionar sem login; troque p/ false quando tiver auth
+      - key: SCRAPER_MODE
+        value: mock          # marketplaces bloqueiam scraping (403); mantenha mock
+      - key: DATABASE_URL
+        fromDatabase: { name: instrumenta-db, property: connectionString }
+      - key: REDIS_URL
+        fromService: { name: instrumenta-redis, type: redis, property: connectionString }
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: https://SEU-APP.vercel.app   # <-- troque pela URL real do frontend
+      - key: ANTHROPIC_API_KEY
+        sync: false          # opcional (OCR/padronização por IA); deixe em branco p/ usar o matcher local
+
+  # Worker Celery (processa listas em background)
+  - type: worker
+    name: instrumenta-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile.worker
+    dockerContext: ./backend
+    plan: free
+    envVars:
+      - key: ENV
+        value: prod
+      - key: SCRAPER_MODE
+        value: mock
+      - key: DATABASE_URL
+        fromDatabase: { name: instrumenta-db, property: connectionString }
+      - key: REDIS_URL
+        fromService: { name: instrumenta-redis, type: redis, property: connectionString }

@@ -1,0 +1,58 @@
+/* @import precisa vir antes de tudo (regra do CSS). */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Tema (claro por padrão) ===== */
+:root{
+  color-scheme: light;
+  --bg:#F1F5F4; --card:#FFFFFF; --ink:#0C2B29; --ink-soft:#516360; --line:#E1E9E7;
+  --primary:#0B6E5F; --primary-dk:#075A4D; --primary-soft:#E6F1EE;
+  --amber:#F59E0B; --amber-dk:#A85B08; --amber-soft:#FDF3E0; --emerald:#0E9F6E;
+  --divider:#F0F3F2; --chip-instr:#EEF2F1; --track:#EDE7DD; --toggle:#E4EBE9;
+  --skeleton:#EDF1F0; --banner-line:#CFE6E0; --amber-line:#F3E2C0; --amber-chip:#F3EEE6;
+  --danger:#C2410C; --header-bg:rgba(241,245,244,.85); --accent-card:#0C2B29;
+}
+/* Escuro: segue o sistema, a menos que o usuário force claro */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#0E1817; --card:#15211F; --ink:#EAF1EF; --ink-soft:#93A5A2; --line:#26332F;
+    --primary:#3BBEA3; --primary-dk:#5FD3BB; --primary-soft:#123029;
+    --amber:#F5A623; --amber-dk:#F2C078; --amber-soft:#2A2011; --emerald:#34C98E;
+    --divider:#1E2A27; --chip-instr:#1B2724; --track:#2A2417; --toggle:#1E2A27;
+    --skeleton:#1C2825; --banner-line:#1E4038; --amber-line:#3A2E14; --amber-chip:#2A2011;
+    --danger:#F1795A; --header-bg:rgba(14,24,23,.85); --accent-card:#10312B;
+  }
+}
+/* Escuro forçado pelo botão (vence em qualquer sistema) */
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0E1817; --card:#15211F; --ink:#EAF1EF; --ink-soft:#93A5A2; --line:#26332F;
+  --primary:#3BBEA3; --primary-dk:#5FD3BB; --primary-soft:#123029;
+  --amber:#F5A623; --amber-dk:#F2C078; --amber-soft:#2A2011; --emerald:#34C98E;
+  --divider:#1E2A27; --chip-instr:#1B2724; --track:#2A2417; --toggle:#1E2A27;
+  --skeleton:#1C2825; --banner-line:#1E4038; --amber-line:#3A2E14; --amber-chip:#2A2011;
+  --danger:#F1795A; --header-bg:rgba(14,24,23,.85); --accent-card:#10312B;
+}
+body{ background:var(--bg); color:var(--ink); transition:background-color .2s ease, color .2s ease; }
+
+/* Fontes e animações do app (movido do <style> em App para evitar reinjeção a cada render). */
+.ff-d{font-family:'Space Grotesk',system-ui,sans-serif}
+.ff-b{font-family:'Inter',system-ui,sans-serif}
+.ff-n{font-family:'Space Mono','Space Grotesk',ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.ff-m{font-family:'Space Mono',ui-monospace,monospace}
+@keyframes scanmove{0%{top:6%}100%{top:94%}}
+.scanline{position:absolute;left:8%;right:8%;height:2px;border-radius:2px;background:linear-gradient(90deg,transparent,var(--primary),transparent);box-shadow:0 0 14px 2px rgba(11,110,95,.45);animation:scanmove 1.3s ease-in-out infinite alternate}
+@keyframes fadeup{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.fadeup{animation:fadeup .5s ease both}
+@keyframes pop{from{opacity:0;transform:scale(.94)}to{opacity:1;transform:none}}
+.pop{animation:pop .3s ease both}
+.spin{animation:spin 1s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.scanline,.fadeup,.pop,.spin{animation:none!important}}
+
+/* Acessibilidade: foco visível para navegação por teclado (não aparece no clique de mouse). */
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+button:focus:not(:focus-visible),a:focus:not(:focus-visible){outline:none}

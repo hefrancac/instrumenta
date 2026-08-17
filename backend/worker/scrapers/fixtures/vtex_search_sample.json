@@ -1,0 +1,89 @@
+[
+  {
+    "productId": "1001",
+    "productName": "Espelho Bucal Plano",
+    "brand": "Golgran",
+    "link": "https://www.dentalcremer.com.br/espelho-bucal-plano-n5/p",
+    "items": [
+      {
+        "itemId": "2001",
+        "name": "nº 5",
+        "nameComplete": "Espelho Bucal Plano nº 5 Golgran",
+        "ean": "7898906320011",
+        "images": [{ "imageUrl": "https://cdn.dentalcremer.com.br/espelho.jpg" }],
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true,
+            "commertialOffer": { "Price": 12.90, "ListPrice": 15.90, "AvailableQuantity": 30, "IsAvailable": true } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "1002",
+    "productName": "Sonda Exploradora",
+    "brand": "Duflex",
+    "link": "https://www.dentalcremer.com.br/sonda-exploradora-n5/p",
+    "items": [
+      {
+        "itemId": "2002",
+        "nameComplete": "Sonda Exploradora Nº 5 Duflex",
+        "ean": "7891234000027",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true,
+            "commertialOffer": { "Price": 9.90, "AvailableQuantity": 5 } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "1003",
+    "productName": "Fio de Sutura Seda 4-0",
+    "brand": "Shalon",
+    "link": "https://www.dentalcremer.com.br/fio-sutura-seda-4-0/p",
+    "items": [
+      {
+        "itemId": "2003",
+        "nameComplete": "Fio de Sutura Seda 4-0 Caixa com 24 Shalon",
+        "ean": "7891010900069",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true,
+            "commertialOffer": { "Price": 42.00, "AvailableQuantity": 10, "IsAvailable": true } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "1004",
+    "productName": "Espelho Bucal Plano (esgotado)",
+    "brand": "Golgran",
+    "link": "https://www.dentalcremer.com.br/espelho-esgotado/p",
+    "items": [
+      {
+        "itemId": "2004",
+        "nameComplete": "Espelho Bucal Plano nº 5 Golgran",
+        "ean": "7898906320011",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true,
+            "commertialOffer": { "Price": 11.50, "AvailableQuantity": 0, "IsAvailable": false } }
+        ]
+      }
+    ]
+  },
+  {
+    "productId": "1005",
+    "productName": "Item sem preço",
+    "brand": "Generico",
+    "link": "https://www.dentalcremer.com.br/sem-preco/p",
+    "items": [
+      {
+        "itemId": "2005",
+        "nameComplete": "Item Sem Preço",
+        "ean": "0",
+        "sellers": [
+          { "sellerId": "1", "sellerDefault": true,
+            "commertialOffer": { "Price": 0, "AvailableQuantity": 0, "IsAvailable": false } }
+        ]
+      }
+    ]
+  }
+]
