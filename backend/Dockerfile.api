@@ -21,10 +21,11 @@ COPY migrations ./migrations
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
 USER appuser
 
+# Render (e outros PaaS) injetam a porta em $PORT; caímos p/ 8000 rodando local.
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD curl -fsS http://localhost:8000/health || exit 1
+  CMD curl -fsS "http://localhost:${PORT:-8000}/health" || exit 1
 
-# Dev overrides this with uvicorn --reload; prod runs gunicorn.
-CMD ["gunicorn", "app.main:app", "-k", "uvicorn.workers.UvicornWorker", \
-     "-b", "0.0.0.0:8000", "-w", "4", "--timeout", "60", "--access-logfile", "-"]
+# Shell form + exec: expande $PORT e mantém o gunicorn como PID 1 (recebe SIGTERM).
+# Dev sobrescreve com uvicorn --reload; prod roda gunicorn.
+CMD ["sh", "-c", "exec gunicorn app.main:app -k uvicorn.workers.UvicornWorker -b 0.0.0.0:${PORT:-8000} -w 2 --timeout 60 --access-logfile -"]
