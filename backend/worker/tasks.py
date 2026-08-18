@@ -32,6 +32,22 @@ def _now() -> dt.datetime:
     return dt.datetime.now(dt.timezone.utc)
 
 
+def _safe_commit(db) -> bool:
+    """Commit resiliente: em qualquer falha faz rollback e segue.
+
+    Sem isso, um commit que estoura (IntegrityError, conexão caída, etc.) deixa a
+    Session em estado inválido e TODA operação seguinte na mesma task falha em
+    cascata. O rollback devolve a sessão a um estado limpo. Retorna True se subiu.
+    """
+    try:
+        db.commit()
+        return True
+    except Exception:  # noqa: BLE001
+        db.rollback()
+        log.exception("commit falhou; rollback aplicado")
+        return False
+
+
 def _is_fresh(db, standard_name: str) -> bool:
     cutoff = _now() - dt.timedelta(hours=settings.CACHE_TTL_HOURS)
     return (db.query(ProductCache)
@@ -84,7 +100,7 @@ def _upsert_offer(db, offer) -> None:
         row.pack_qty = getattr(offer, 'pack_qty', 1)
         row.unit_price = getattr(offer, 'unit_price', None)
         row.in_stock, row.last_updated = offer.in_stock, _now()
-    db.commit()
+    _safe_commit(db)
     if offer.needs_review:
         _queue_review(db, offer)
 
@@ -99,20 +115,20 @@ def _recompute_health(db, store_id: str) -> None:
     store = db.get(Store, store_id)
     if store:
         store.status = "degraded" if rate < DEGRADED_SUCCESS_RATE else "ok"
-        db.commit()
+        _safe_commit(db)
 
 
 def _log_run(db, store_id, query, status, count, error, duration_ms) -> None:
     db.add(ScrapeRun(store_id=store_id, query=query, status=status,
                      results_count=count, error=error, duration_ms=duration_ms))
-    db.commit()
+    _safe_commit(db)
     _recompute_health(db, store_id)
 
 
 def _bump_job(db, list_id: int) -> None:
     db.execute(update(Job).where(Job.list_id == list_id)
                .values(completed_items=Job.completed_items + 1, updated_at=func.now()))
-    db.commit()
+    _safe_commit(db)
 
 
 @app.task(bind=True, max_retries=2, name="worker.tasks.scrape_item")
@@ -140,6 +156,7 @@ def scrape_item(self, list_id: int, standard_name: str) -> str:
                     log.warning("scraper returned zero results",
                                 extra={"extra_fields": {"store": store_id, "item": standard_name}})
             except Exception as exc:  # noqa: BLE001
+                db.rollback()   # limpa qualquer add pendente antes de registrar o erro
                 dur = int((time.monotonic() - t0) * 1000)
                 _log_run(db, store_id, standard_name, "error", 0, str(exc)[:500], dur)
                 log.error("scraper error",

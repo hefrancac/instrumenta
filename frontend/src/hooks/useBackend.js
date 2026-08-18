@@ -254,12 +254,15 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
     }
   };
 
-  // Ao voltar online (e com backend conectado), drena a fila de patches pendentes.
+  // Drena a fila de patches pendentes (persistida no localStorage) quando volta
+  // online E também no boot: se o app foi fechado offline com ações na fila e
+  // reabre já online, o evento 'online' não dispara — então ressuscitamos aqui.
   useEffect(() => {
     const onOnline = () => {
       if (getToken() || (backendOn && conn === "ok")) drainQueue((a) => jsend(a.url, a.method, a.body));
     };
     window.addEventListener("online", onOnline);
+    if (navigator.onLine) onOnline();   // ressuscita a fila no carregamento, não só na transição
     return () => window.removeEventListener("online", onOnline);
   }, [backendOn, conn]); // eslint-disable-line
 

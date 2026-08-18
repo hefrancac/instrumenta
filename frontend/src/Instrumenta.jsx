@@ -104,18 +104,21 @@ export default function App() {
   useEffect(() => {
     if (!items.length) { setLocalOpt(null); return; }
     const w = optWorker.current;
-    const id = ++jobIdRef.current;                       // ticket desta requisição
     if (!w) { setLocalOpt(optimize(items)); return; }    // ambiente sem worker
-    let done = false;
+    const id = ++jobIdRef.current;                       // ticket desta requisição
+    let done = false, fallback;
     // Só aplica a resposta se o jobId bater com o pedido mais recente (evita
     // que uma otimização antiga sobrescreva uma mais nova — condição de corrida).
     const onMsg = (e) => { if (e.data?.ok && e.data.jobId === id) { done = true; setLocalOpt(e.data.opt); } };
     w.addEventListener("message", onMsg);
-    // Rede de segurança: se o worker não responder (ex.: não carregou no artifact
-    // de arquivo único), calcula síncrono — desde que ainda seja o job mais recente.
-    const t = setTimeout(() => { if (!done && jobIdRef.current === id) setLocalOpt(optimize(items)); }, 150);
-    w.postMessage({ items, jobId: id });
-    return () => { clearTimeout(t); w.removeEventListener("message", onMsg); };
+    // Debounce ~90ms: edições rápidas no carrinho coalescem num único cálculo (5
+    // cliques seguidos = 1 job, não 5) — poupa CPU/bateria. Só depois de despachar
+    // arma a rede de segurança: se o worker calar, recalcula síncrono (job mais recente).
+    const dispatch = setTimeout(() => {
+      w.postMessage({ items, jobId: id });
+      fallback = setTimeout(() => { if (!done && jobIdRef.current === id) setLocalOpt(optimize(items)); }, 150);
+    }, 90);
+    return () => { clearTimeout(dispatch); clearTimeout(fallback); w.removeEventListener("message", onMsg); };
   }, [items]);
   const opt = (backendOn && remoteOpt) ? remoteOpt : localOpt;
 
