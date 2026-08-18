@@ -97,7 +97,7 @@ export let CATALOG = [
     brands: [{ name: "Odous", prices: { cremer: 29.9, surya: 26.91, speed: 31.39 } }, { name: "Tanari", prices: { cremer: 19.9, surya: 17.91, speed: 20.89 } }] },
   { id: "cone-papel", std: "Pontas de Papel Absorvente (caixa)", cat: "Material", kw: ["absorvente", "cone de papel"],
     brands: [{ name: "Tanari", prices: { cremer: 19.9, surya: 17.91, speed: 20.89 } }] },
-  { id: "cimento-endo", std: "Cimento Endodôntico (Endofill)", cat: "Material", kw: ["endofill"],
+  { id: "cimento-endo", std: "Cimento Endodôntico (Endofill)", cat: "Material", kw: ["endofill", "cimento endodontico"],
     brands: [{ name: "Dentsply", prices: { cremer: 64.9, surya: 58.41, speed: 68.15 } }] },
   { id: "espacador", std: "Espaçador Digital Endodôntico", cat: "Instrumental", kw: ["espacador"],
     brands: [{ name: "Odus", prices: { cremer: 22.9, surya: 20.61, speed: 24.04 } }] },
@@ -115,7 +115,7 @@ export let CATALOG = [
     brands: [{ name: "KG", prices: { cremer: 19.9, surya: 17.91, speed: 20.89 } }] },
   { id: "pasta-polimento", std: "Pasta para Polimento de Resina", cat: "Material", kw: ["pasta", "polimento"],
     brands: [{ name: "Diamond", prices: { cremer: 34.9, surya: 31.41, speed: 36.65 } }] },
-  { id: "porta-dycal", std: "Porta Hidróxido de Cálcio (Porta Dycal)", cat: "Instrumental", kw: ["dycal"],
+  { id: "porta-dycal", std: "Porta Hidróxido de Cálcio (Porta Dycal)", cat: "Instrumental", kw: ["dycal", "porta dycal"],
     brands: [{ name: "Golgran", prices: { cremer: 24.9, surya: 22.41, speed: 26.14 } }] },
   { id: "arco-young", std: "Arco de Young", cat: "Instrumental", kw: ["young"],
     brands: [{ name: "Golgran", prices: { cremer: 19.9, surya: 17.91, speed: 20.89 } }] },
@@ -149,7 +149,7 @@ export let CATALOG = [
     brands: [{ name: "Millennium", prices: { cremer: 39.9, surya: 35.91, speed: 41.9 } }] },
   { id: "pote-vidro", std: "Pote de Vidro", cat: "Instrumental", kw: ["pote", "vidro"],
     brands: [{ name: "Nevoni", prices: { cremer: 19.9, surya: 17.91, speed: 20.89 } }] },
-  { id: "caneta-hidro", std: "Caneta Hidrocor / Marcadora", cat: "Material", kw: ["caneta", "hidrocor"],
+  { id: "caneta-hidro", std: "Caneta Hidrocor / Marcadora", cat: "Material", kw: ["caneta", "hidrocor", "caneta hidro"],
     brands: [{ name: "Pilot", prices: { cremer: 4.9, surya: 4.41, speed: 5.15 } }] },
   { id: "esp-cimento", std: "Espátula para Manipulação de Cimentos", cat: "Instrumental", kw: ["manipulacao", "cimentos"],
     brands: [{ name: "Golgran", prices: { cremer: 18.9, surya: 17.01, speed: 19.84 } }] },
@@ -165,7 +165,7 @@ export let CATALOG = [
     brands: [{ name: "Preven", prices: { cremer: 12.9, surya: 11.61, speed: 13.55 } }] },
   { id: "esp-dupla", std: "Espátula Dupla nº 3051", cat: "Instrumental", kw: ["dupla", "3051"],
     brands: [{ name: "Millennium", prices: { cremer: 24.9, surya: 22.41, speed: 26.14 } }] },
-  { id: "calcador", std: "Calcador Duplo nº 3101", cat: "Instrumental", kw: ["calcador"],
+  { id: "calcador", std: "Calcador Duplo nº 3101", cat: "Instrumental", kw: ["calcador", "calcador duplo", "3101"],
     brands: [{ name: "Millennium", prices: { cremer: 26.9, surya: 24.21, speed: 28.25 } }] },
   { id: "alicate-curvar", std: "Alicate de Curvar Lima", cat: "Instrumental", kw: ["alicate", "curvar"],
     brands: [{ name: "Odus", prices: { cremer: 39.9, surya: 35.91, speed: 41.9 } }] },
@@ -287,7 +287,7 @@ export let CATALOG = [
     brands: [{ name: "Golgran", prices: { cremer: 14.9, surya: 13.41, speed: 15.65 } }] },
   { id: "forceps-151", std: "Fórceps nº 151 (adulto inferior)", cat: "Instrumental", kw: ["forceps", "151"],
     brands: [{ name: "Quinelato", prices: { cremer: 74.9, surya: 67.41, speed: 78.65 } }] },
-  { id: "forceps-18", std: "Fórceps nº 18L / 18R (molar superior)", cat: "Instrumental", kw: ["forceps", "18", "18l", "18r"],
+  { id: "forceps-18", std: "Fórceps nº 18L / 18R (molar superior)", cat: "Instrumental", kw: ["forceps", "18l", "18r"],
     brands: [{ name: "Quinelato", prices: { cremer: 74.9, surya: 67.41, speed: 78.65 } }] },
 
   // --- Profilaxia / Dentística (materiais) ---
@@ -305,7 +305,7 @@ export let CATALOG = [
     brands: [{ name: "Coltene", prices: { cremer: 24.9, surya: 22.41, speed: 26.15 } }] },
   { id: "resina-flow", std: "Resina Composta Flow (fluida)", cat: "Material", kw: ["resina", "flow", "fluida"],
     brands: [{ name: "FGM", prices: { cremer: 79.9, surya: 71.91, speed: 83.9 } }, { name: "3M", prices: { cremer: 99.9, surya: 89.91, speed: 104.9 } }] },
-  { id: "fotopolimerizador", std: "Fotopolimerizador LED", cat: "Instrumental", kw: ["fotopolimerizador", "fotopolimerizadora", "led"],
+  { id: "fotopolimerizador", std: "Fotopolimerizador LED", cat: "Instrumental", kw: ["fotopolimerizador", "led"],
     brands: [{ name: "DB", prices: { cremer: 189.9, surya: 170.91, speed: 199.4 } }] },
 
   // --- Endodontia (soluções e limas) / Moldagem ---
@@ -411,6 +411,8 @@ export let CATALOG = [
     brands: [{ name: "Angelus", prices: { cremer: 9.9, surya: 8.91, speed: 10.4 } }] },
   { id: "solvente-guta", std: "Solvente de Guta (Eucaliptol / Xilol)", cat: "Material", kw: ["eucaliptol", "xilol", "solvente"],
     brands: [{ name: "Biodinâmica", prices: { cremer: 24.9, surya: 22.41, speed: 26.15 } }] },
+  { id: "gabarito", std: "Gabarito / Régua de Espessura", cat: "Instrumental", kw: ["gabarito"],
+    brands: [{ name: "Golgran", prices: { cremer: 14.9, surya: 13.41, speed: 15.65 } }] },
 ];
 
 export const SAMPLE = `1 espelho bucal n5
