@@ -77,6 +77,12 @@ export default function ReviewStage({
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className={`ff-d text-sm font-semibold leading-tight ${it.owned ? "line-through" : ""}`}>{it.raw || it.std}</p>
                     <CatChip cat={it.cat} />
+                    {it.mergedCount > 1 && (
+                      <span className="ff-b text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary-soft text-primary"
+                        title={`${it.mergedCount} linhas agrupadas neste produto:\n` + (it.mergedRaws || []).join("\n")}>
+                        {it.mergedCount}× na lista
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <p className="ff-b text-xs truncate text-ink-soft">

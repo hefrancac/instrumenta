@@ -62,15 +62,20 @@ describe("parseList", () => {
     expect(matched.filter((m) => m.catId === "espelho")).toHaveLength(1);
   });
 
-  it("mantém linhas distintas que casam o mesmo produto (limas)", () => {
+  it("agrupa linhas do mesmo produto somando a quantidade (limas)", () => {
     const { matched } = parseList("caixa de lima 08\ncaixa de lima 10\ncaixa de lima 15");
-    expect(matched.filter((m) => m.catId === "lima-endo")).toHaveLength(3);
+    const limas = matched.filter((m) => m.catId === "lima-endo");
+    expect(limas).toHaveLength(1);
+    expect(limas[0].qty).toBe(3);
+    expect(limas[0].mergedCount).toBe(3);
   });
 
-  it("herda o título para linhas só-código (pontas diamantadas)", () => {
+  it("herda o título e agrupa linhas só-código (pontas diamantadas)", () => {
     const { matched } = parseList("Pontas diamantadas para alta rotação:-1014F\n-4138F\n-3168F");
-    expect(matched).toHaveLength(3);
-    expect(matched.every((m) => m.catId === "ponta-diam")).toBe(true);
+    expect(matched).toHaveLength(1);
+    expect(matched[0].catId).toBe("ponta-diam");
+    expect(matched[0].mergedCount).toBe(3);
+    expect(matched[0].qty).toBe(3);
   });
 
   it("texto não-odontológico não casa nada", () => {

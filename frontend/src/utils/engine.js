@@ -111,6 +111,28 @@ function nameOverlap(tokens, item) {
   return s;
 }
 
+// Consolida itens repetidos (mesmo produto do catálogo) numa linha só, somando as
+// quantidades — evita revisões enormes quando a lista repete um item, ou traz várias
+// variações que caem no mesmo produto (ex.: muitas pontas diamantadas -> "Ponta Diamantada").
+// `mergedCount` guarda quantas linhas viraram aquele card (a UI mostra "N× na lista").
+function consolidate(items) {
+  const byCat = new Map();
+  const out = [];
+  for (const it of items) {
+    const prev = byCat.get(it.catId);
+    if (prev) {
+      prev.qty = Math.min(99, (prev.qty || 1) + (it.qty || 1));
+      prev.mergedCount = (prev.mergedCount || 1) + 1;
+      if (prev.mergedRaws.length < 20 && it.raw) prev.mergedRaws.push(it.raw);
+    } else {
+      const copy = { ...it, mergedCount: 1, mergedRaws: it.raw ? [it.raw] : [] };
+      byCat.set(it.catId, copy);
+      out.push(copy);
+    }
+  }
+  return out;
+}
+
 // "IA": casa cada linha da lista com um item do catálogo (Plano A e, se falhar, Plano B).
 export function parseList(raw) {
   const lines = raw.split(/\n|;/).map((l) => l.trim()).filter(Boolean);
@@ -165,7 +187,7 @@ export function parseList(raw) {
     if (match) { context = line; push(match, line, qty); }
     else { unmatched.push(line); }
   }
-  return { matched, unmatched };
+  return { matched: consolidate(matched), unmatched };
 }
 
 /* ------------------------------ Optimization ------------------------------ */
