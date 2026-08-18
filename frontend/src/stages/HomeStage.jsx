@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import {
-  Upload, Camera, ScanLine, Sparkles, ClipboardPaste, Search, Wifi, X, Coins, ArrowRight, Download, Share,
+  Upload, Camera, ScanLine, Sparkles, ClipboardPaste, Search, Wifi, X, Coins, ArrowRight, Download, Share, FileText,
 } from "lucide-react";
 import { SAMPLE } from "../constants/catalog";
 
@@ -126,41 +126,37 @@ export default function HomeStage({
         )}
       </div>
 
-      {/* Foto/PDF: ativo quando o OCR está ligado; senão, "em breve" (honesto) */}
+      {/* PDF / arquivo: PDF de texto e .txt são lidos localmente (grátis); foto precisa de OCR */}
       <div className="mt-4 rounded-2xl border p-4 bg-card border-line">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="rounded-xl flex items-center justify-center shrink-0 bg-primary-soft" style={{ width: 40, height: 40 }}>
-              <Camera size={18} className="text-primary" />
+              <FileText size={18} className="text-primary" />
             </div>
             <div className="min-w-0 text-left">
-              <p className="ff-d text-sm font-semibold flex items-center gap-2 flex-wrap">
-                Enviar foto ou PDF da lista
-                {!OCR_ENABLED && (
-                  <span className="ff-b text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-soft text-amber-dk">em breve</span>
-                )}
-              </p>
+              <p className="ff-d text-sm font-semibold">Enviar PDF ou arquivo</p>
               <p className="ff-b text-xs text-ink-soft leading-snug">
                 {OCR_ENABLED
-                  ? "A IA lê a foto (mesmo manuscrita) e extrai os itens."
-                  : "OCR por IA para ler a foto — estamos ativando em breve."}
+                  ? "PDF, foto ou .txt — a IA lê o que precisar."
+                  : "PDF de texto e .txt são lidos aqui no navegador. Foto/escaneado: OCR em breve."}
               </p>
             </div>
           </div>
-          {OCR_ENABLED && (
-            <div className="flex items-center gap-2 shrink-0">
-              <input ref={fileRef} type="file" accept="image/*,application/pdf,text/plain,.txt,.csv" className="hidden"
-                onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; onRunFile(f); }} />
-              <button onClick={() => { if (fileRef.current) { fileRef.current.removeAttribute("capture"); fileRef.current.click(); } }}
-                className="ff-b inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white font-semibold text-xs transition-all hover:opacity-90 bg-primary">
-                <Upload size={14} /> Arquivo
-              </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <input ref={fileRef} type="file" className="hidden"
+              accept={OCR_ENABLED ? "application/pdf,text/plain,.txt,.csv,image/*" : "application/pdf,text/plain,.txt,.csv"}
+              onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ""; onRunFile(f); }} />
+            <button onClick={() => { if (fileRef.current) { fileRef.current.removeAttribute("capture"); fileRef.current.click(); } }}
+              className="ff-b inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-white font-semibold text-xs transition-all hover:opacity-90 bg-primary">
+              <Upload size={14} /> Enviar
+            </button>
+            {OCR_ENABLED && (
               <button onClick={() => { if (fileRef.current) { fileRef.current.setAttribute("capture", "environment"); fileRef.current.click(); } }}
                 className="ff-b inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg font-semibold text-xs transition-all hover:opacity-80 border bg-card border-line text-ink">
                 <Camera size={14} /> Foto
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

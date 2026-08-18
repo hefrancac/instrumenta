@@ -145,7 +145,26 @@ export function useBackend({ setStage, setProcStep, setItems, setUnmatched, setD
     // Texto (arquivo .txt/.csv) roda local — não precisa de IA, igual ao colar lista.
     if (isText) { const t = await file.text(); localRun(t, false); return; }
 
-    // Daqui pra baixo: foto ou PDF, que exige OCR por IA no backend. Preferir o backend
+    // PDF: tenta extrair o texto no navegador (grátis, offline). PDF de texto (lista
+    // digitada) é lido na hora; escaneado/imagem devolve pouco texto -> pede OCR.
+    const isPdf = (file.type || "").includes("pdf") || /\.pdf$/i.test(file.name);
+    if (isPdf) {
+      setStage("processing"); setProcStep(0);
+      [400, 1200].forEach((t, i) => setTimeout(() => setProcStep(i + 1), t));
+      try {
+        const { extractPdfText } = await import("../utils/pdfText.js");
+        const text = await extractPdfText(file);
+        if (text.replace(/\s+/g, "").length >= 40) { localRun(text, false); return; }
+        setStage("home");
+        setBackendError("Esse PDF parece ser escaneado (imagem), sem texto pra extrair. Pra ler assim precisa do OCR por IA (em breve) — ou cole a lista em texto.");
+      } catch (e) {
+        setStage("home");
+        setBackendError("Não consegui ler o PDF: " + e.message);
+      }
+      return;
+    }
+
+    // Daqui pra baixo: foto (imagem), que exige OCR por IA no backend. Preferir o backend
     // deployado (API_BASE) com o token do usuário logado; senão, o painel manual.
     const authed = !!(getToken() && API_BASE);
     const manual = backendOn && conn === "ok" && apiBase;
